@@ -30,15 +30,27 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, selectedPoi
 
       const map = mapRef.current;
 
-      const onDown = (e: any) => {
+      const mapContainer = map.getContainer();
+
+      const getLatLng = (e: MouseEvent | TouchEvent) => {
+        const rect = mapContainer.getBoundingClientRect();
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+        const point = L.point(clientX - rect.left, clientY - rect.top);
+        return map.containerPointToLatLng(point);
+      };
+
+      const onDown = (e: MouseEvent | TouchEvent) => {
+        e.preventDefault();
         isDrawing.current = true;
-        capturedPoints.current = [e.latlng];
+        const latlng = getLatLng(e);
+        capturedPoints.current = [latlng];
         map.dragging.disable();
 
         if (polygonRef.current) map.removeLayer(polygonRef.current);
         if (currentPathRef.current) map.removeLayer(currentPathRef.current);
 
-        currentPathRef.current = L.polyline([e.latlng], {
+        currentPathRef.current = L.polyline([latlng], {
           color: '#bef264',
           weight: 4,
           lineJoin: 'round',
@@ -47,11 +59,13 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, selectedPoi
         }).addTo(map);
       };
 
-      const onMove = (e: any) => {
+      const onMove = (e: MouseEvent | TouchEvent) => {
         if (!isDrawing.current || !currentPathRef.current) return;
+        e.preventDefault();
+        const latlng = getLatLng(e);
         const lastPoint = capturedPoints.current[capturedPoints.current.length - 1];
-        if (lastPoint.distanceTo(e.latlng) > 5) {
-          capturedPoints.current.push(e.latlng);
+        if (lastPoint.distanceTo(latlng) > 5) {
+          capturedPoints.current.push(latlng);
           currentPathRef.current.setLatLngs(capturedPoints.current);
         }
       };
@@ -74,15 +88,17 @@ const MapSelector: React.FC<MapSelectorProps> = ({ onLocationSelect, selectedPoi
           fillColor: '#bef264',
           fillOpacity: 0.4,
           weight: 3,
-          className: 'shadow-lg shadow-lime-400'
         }).addTo(map);
 
         onLocationSelect(points);
       };
 
-      map.on('mousedown touchstart', onDown);
-      map.on('mousemove touchmove', onMove);
-      map.on('mouseup touchend', onUp);
+      mapContainer.addEventListener('mousedown', onDown);
+      mapContainer.addEventListener('mousemove', onMove);
+      mapContainer.addEventListener('mouseup', onUp);
+      mapContainer.addEventListener('touchstart', onDown, { passive: false });
+      mapContainer.addEventListener('touchmove', onMove, { passive: false });
+      mapContainer.addEventListener('touchend', onUp);
     }
 
     if (selectedPoints && selectedPoints.length > 0 && mapRef.current && !isDrawing.current) {
