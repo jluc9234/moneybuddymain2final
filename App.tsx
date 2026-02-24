@@ -171,7 +171,7 @@ const App: React.FC = () => {
                   </div>
                 )}
                 
-                <BalanceSummary accounts={accounts} isLoading={isLoading} />
+                <BalanceSummary accounts={accounts} transactions={transactions} isLoading={isLoading} />
                 <AccountList accounts={accounts} />
                 
                 <div className="space-y-4">
