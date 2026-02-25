@@ -26,7 +26,7 @@ const Header: React.FC<HeaderProps> = ({ onConnect, onLogout, userEmail, isAdmin
             Money Buddy
           </h1>
           <div className="flex items-center space-x-2">
-            <p className="text-xs font-medium uppercase tracking-widest" style={{ color: '#a3e635' }}>Geo-Safe</p>
+            <p className="text-xs font-medium uppercase tracking-widest" style={{ color: '#a3e635' }}>Secure Marketplace</p>
             {isAdmin && (
               <span className="px-1.5 py-0.5 bg-lime-400/20 text-lime-400 text-[8px] font-black rounded border border-lime-400/30 uppercase tracking-tighter shadow-[0_0_5px_rgba(190,242,100,0.4)]">
                 Admin Terminal

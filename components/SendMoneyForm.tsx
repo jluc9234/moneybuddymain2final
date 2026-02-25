@@ -88,7 +88,7 @@ const SendMoneyForm: React.FC<SendMoneyFormProps> = ({ onTransactionInitiated })
       }>('create-payment-intent', {
         amount: val,
         recipient_email: email,
-        description: description || 'Secure Asset Transfer',
+        description: description || 'Goods & Services Payment',
         geo_fence_lat: geoFenceLat,
         geo_fence_lng: geoFenceLng,
         geo_fence_radius: geoFenceRadius,
@@ -116,12 +116,12 @@ const SendMoneyForm: React.FC<SendMoneyFormProps> = ({ onTransactionInitiated })
         throw new Error(stripeError.message || 'Payment failed');
       }
 
-      const feeDisplay = `2% Fee: $${paymentResult.platform_fee.toFixed(2)}`;
-      const netDisplay = `Net to Recipient: $${paymentResult.net_amount.toFixed(2)}`;
-      const expiryMsg = useExpiry ? ` Time-lock: ${expiryHours}H.` : '';
-      const geoMsg = useGeofence ? ' Geo-fence active.' : '';
+      const feeDisplay = `Service Fee (2%): $${paymentResult.platform_fee.toFixed(2)}`;
+      const netDisplay = `Seller Receives: $${paymentResult.net_amount.toFixed(2)}`;
+      const expiryMsg = useExpiry ? ` Fulfillment deadline: ${expiryHours}H.` : '';
+      const geoMsg = useGeofence ? ' Delivery zone set.' : '';
 
-      alert(`Payment Confirmed. $${val} secured for ${email}.\n${feeDisplay} | ${netDisplay}${expiryMsg}${geoMsg}`);
+      alert(`Payment Secured in Escrow. $${val} held for ${email}.\n${feeDisplay} | ${netDisplay}${expiryMsg}${geoMsg}`);
 
       setAmount('');
       setEmail('');
@@ -132,7 +132,7 @@ const SendMoneyForm: React.FC<SendMoneyFormProps> = ({ onTransactionInitiated })
       setExpiryHours('24');
       onTransactionInitiated?.();
     } catch (err) {
-      alert(`Transfer Error: ${(err as Error).message}`);
+      alert(`Payment Error: ${(err as Error).message}`);
     }
 
     setIsLoading(false);
@@ -143,26 +143,26 @@ const SendMoneyForm: React.FC<SendMoneyFormProps> = ({ onTransactionInitiated })
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-bold flex items-center space-x-2">
           <span className="w-2 h-6 bg-lime-400 rounded-full inline-block shadow-[0_0_10px_rgba(190,242,100,0.8)]"></span>
-          <span className="tracking-tight uppercase italic">Initiate Transfer</span>
+          <span className="tracking-tight uppercase italic">New Payment</span>
         </h3>
-        <span className="text-[8px] font-black text-lime-400/50 uppercase tracking-[0.2em] animate-pulse">Live Ledger</span>
+        <span className="text-[8px] font-black text-lime-400/50 uppercase tracking-[0.2em] animate-pulse">Escrow</span>
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="group">
-          <label className="block text-[9px] font-black text-indigo-200 uppercase mb-1 ml-1 tracking-widest opacity-60 group-hover:opacity-100 transition-opacity">Destination ID</label>
+          <label className="block text-[9px] font-black text-indigo-200 uppercase mb-1 ml-1 tracking-widest opacity-60 group-hover:opacity-100 transition-opacity">Seller / Provider Email</label>
           <input 
             type="email" 
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 focus:outline-none focus:border-lime-400/50 transition-all text-sm font-medium hover:bg-white/10"
-            placeholder="recipient@secure.net"
+            placeholder="seller@example.com"
           />
         </div>
 
         <div className="group">
-          <label className="block text-[9px] font-black text-indigo-200 uppercase mb-1 ml-1 tracking-widest opacity-60 group-hover:opacity-100 transition-opacity">Asset Amount</label>
+          <label className="block text-[9px] font-black text-indigo-200 uppercase mb-1 ml-1 tracking-widest opacity-60 group-hover:opacity-100 transition-opacity">Payment Amount</label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lime-400 font-black">$</span>
             <input 
@@ -185,7 +185,7 @@ const SendMoneyForm: React.FC<SendMoneyFormProps> = ({ onTransactionInitiated })
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   </svg>
                 </div>
-                <span className={`text-[10px] font-black uppercase tracking-widest ${useGeofence ? 'text-indigo-200' : 'text-gray-500'}`}>Spatial Lock</span>
+                <span className={`text-[10px] font-black uppercase tracking-widest ${useGeofence ? 'text-indigo-200' : 'text-gray-500'}`}>Delivery Zone</span>
               </div>
               <input type="checkbox" checked={useGeofence} onChange={(e) => setUseGeofence(e.target.checked)} className="w-4 h-4 accent-lime-400 cursor-pointer" />
             </div>
@@ -204,7 +204,7 @@ const SendMoneyForm: React.FC<SendMoneyFormProps> = ({ onTransactionInitiated })
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <span className={`text-[10px] font-black uppercase tracking-widest ${useExpiry ? 'text-indigo-200' : 'text-gray-500'}`}>Time Restriction</span>
+                <span className={`text-[10px] font-black uppercase tracking-widest ${useExpiry ? 'text-indigo-200' : 'text-gray-500'}`}>Fulfillment Deadline</span>
               </div>
               <input type="checkbox" checked={useExpiry} onChange={(e) => setUseExpiry(e.target.checked)} className="w-4 h-4 accent-lime-400 cursor-pointer" />
             </div>
@@ -222,7 +222,7 @@ const SendMoneyForm: React.FC<SendMoneyFormProps> = ({ onTransactionInitiated })
                   <option value="48">48 Hours</option>
                   <option value="168">7 Days</option>
                 </select>
-                <p className="text-[7px] text-gray-400 font-black uppercase tracking-widest text-center">Recall to sender if unclaimed within period</p>
+                <p className="text-[7px] text-gray-400 font-black uppercase tracking-widest text-center">Auto-refund if order not fulfilled within period</p>
               </div>
             )}
           </div>
@@ -251,14 +251,14 @@ const SendMoneyForm: React.FC<SendMoneyFormProps> = ({ onTransactionInitiated })
                <div className="w-3 h-3 border-2 border-indigo-900 border-t-transparent rounded-full animate-spin"></div>
                <span>PROCESSING...</span>
              </div>
-          ) : 'DEPLOY CREDITS'}
+          ) : 'SECURE PAYMENT'}
         </button>
 
         <div className="flex flex-col items-center space-y-1 opacity-40 mt-4">
-           <p className="text-[7px] font-black uppercase tracking-widest text-indigo-200">Sovereign Protocol v3.2</p>
+           <p className="text-[7px] font-black uppercase tracking-widest text-indigo-200">Buyer Protection Active</p>
            <div className="flex items-center space-x-1">
              <span className="w-1 h-1 bg-lime-400 rounded-full animate-pulse"></span>
-             <p className="text-[7px] font-black uppercase tracking-tighter">Stripe Settlement Interface Active</p>
+             <p className="text-[7px] font-black uppercase tracking-tighter">Escrow Secured by Stripe</p>
            </div>
         </div>
       </form>

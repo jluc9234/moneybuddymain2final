@@ -31,7 +31,7 @@ const SecureEscrow: React.FC<SecureEscrowProps> = ({ inboundTransfers, onClaim }
     if (transfer.expires_at) {
       const expiry = new Date(transfer.expires_at);
       if (now > expiry) {
-        alert("Protocol Timeout: Transaction has exceeded its temporal lock window.");
+        alert("This order has expired. The buyer's payment will be refunded.");
         setCheckingLocation(null);
         return;
       }
@@ -70,7 +70,7 @@ const SecureEscrow: React.FC<SecureEscrowProps> = ({ inboundTransfers, onClaim }
               transaction_id: transfer.id,
               metadata: { attempted_coords: userPoint }
             });
-            alert('Spatial Violation: Hardware reported coordinates outside the secure perimeter.');
+            alert('Location check failed: You must be at the designated delivery zone to collect payment.');
             setCheckingLocation(null);
             return;
           }
@@ -80,7 +80,7 @@ const SecureEscrow: React.FC<SecureEscrowProps> = ({ inboundTransfers, onClaim }
         await releaseEscrowOnServer(transfer.id, userLat, userLng);
       },
       (error) => {
-        alert(`Hardware Signal Error: ${error.message}. Spatial verification requires active GPS hardware.`);
+        alert(`Location access required: ${error.message}. Enable GPS to verify delivery location.`);
         setCheckingLocation(null);
       },
       geoOptions
@@ -125,7 +125,7 @@ const SecureEscrow: React.FC<SecureEscrowProps> = ({ inboundTransfers, onClaim }
         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
         </svg>
-        Sovereign Escrow Queue
+        Incoming Orders
       </h3>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -136,7 +136,7 @@ const SecureEscrow: React.FC<SecureEscrowProps> = ({ inboundTransfers, onClaim }
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-widest mb-1">
-                    {isExpired ? 'Link Severed' : 'Locked Asset'}
+                    {isExpired ? 'Order Expired' : 'Payment in Escrow'}
                   </p>
                   <h4 className="text-2xl font-black font-mono text-white">${transfer.amount.toLocaleString()}</h4>
                   {transfer.net_amount && (
@@ -144,18 +144,18 @@ const SecureEscrow: React.FC<SecureEscrowProps> = ({ inboundTransfers, onClaim }
                   )}
                 </div>
                 <div className="text-right">
-                  <span className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter block">Origin Terminal</span>
+                  <span className="text-[9px] text-gray-500 font-bold uppercase tracking-tighter block">Buyer</span>
                   <span className="text-[10px] font-medium text-indigo-200">{transfer.senderEmail}</span>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div className="flex justify-between items-center text-[9px] uppercase font-black tracking-[0.2em]">
-                  <span className="text-gray-500">Security:</span>
+                  <span className="text-gray-500">Conditions:</span>
                   <div className="flex space-x-2">
-                    {(transfer.geofence_points || transfer.geo_fence_lat != null) && <span className="text-lime-400">SPATIAL_LOCK</span>}
-                    {(transfer.expires_at || transfer.time_lock_until) && <span className="text-orange-400">TIME_LOCK</span>}
-                    {!transfer.geofence_points && transfer.geo_fence_lat == null && !transfer.expires_at && !transfer.time_lock_until && <span className="text-indigo-400">SIG_PIN</span>}
+                    {(transfer.geofence_points || transfer.geo_fence_lat != null) && <span className="text-lime-400">DELIVERY_ZONE</span>}
+                    {(transfer.expires_at || transfer.time_lock_until) && <span className="text-orange-400">DEADLINE</span>}
+                    {!transfer.geofence_points && transfer.geo_fence_lat == null && !transfer.expires_at && !transfer.time_lock_until && <span className="text-indigo-400">STANDARD</span>}
                   </div>
                 </div>
                 
@@ -182,7 +182,7 @@ const SecureEscrow: React.FC<SecureEscrowProps> = ({ inboundTransfers, onClaim }
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                       </svg>
-                      <span>{isExpired ? 'Expired' : 'Authorize Release'}</span>
+                      <span>{isExpired ? 'Expired' : 'Confirm Delivery & Collect'}</span>
                     </>
                   )}
                 </button>

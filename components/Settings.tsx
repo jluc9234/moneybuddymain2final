@@ -53,7 +53,6 @@ const Settings: React.FC<SettingsProps> = ({ userEmail, isAdmin }) => {
       const result = await callEdgeFunction<{ link_token: string }>('create-link-token', {});
       setLinkToken(result.link_token);
     } catch (err) {
-      console.log("[v0] Connect bank error:", err);
       setStatusMsg(`Error: ${(err as Error).message}`);
     } finally {
       setLoading(false);
@@ -123,7 +122,7 @@ const Settings: React.FC<SettingsProps> = ({ userEmail, isAdmin }) => {
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
       <div className="flex items-center space-x-4 px-2">
-        <h2 className="text-3xl font-black tracking-tight uppercase">Terminal Configuration</h2>
+        <h2 className="text-3xl font-black tracking-tight uppercase">Account Settings</h2>
         {isAdmin && <span className="bg-lime-400/20 text-lime-400 px-3 py-1 rounded-full text-[10px] font-black uppercase border border-lime-400/30">Admin Access Restricted</span>}
       </div>
 
@@ -135,15 +134,15 @@ const Settings: React.FC<SettingsProps> = ({ userEmail, isAdmin }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2 space-y-6">
-          <Section title="Operational Identity">
+          <Section title="Account Info">
             <div className="space-y-4">
               <div className="flex justify-between items-center py-2 border-b border-white/5">
-                <span className="text-sm text-gray-400 font-bold uppercase tracking-widest">Login ID</span>
+                <span className="text-sm text-gray-400 font-bold uppercase tracking-widest">Email</span>
                 <span className="text-sm font-medium">{userEmail}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-white/5">
-                <span className="text-sm text-gray-400 font-bold uppercase tracking-widest">Clearance Level</span>
-                <span className="text-sm font-black text-indigo-400 uppercase tracking-tighter">{isAdmin ? 'Overseer (Level 99)' : 'Standard Operator'}</span>
+                <span className="text-sm text-gray-400 font-bold uppercase tracking-widest">Account Type</span>
+                <span className="text-sm font-black text-indigo-400 uppercase tracking-tighter">{isAdmin ? 'Admin' : 'Standard'}</span>
               </div>
             </div>
           </Section>
@@ -181,7 +180,7 @@ const Settings: React.FC<SettingsProps> = ({ userEmail, isAdmin }) => {
               <div className="flex items-center justify-between py-2 border-b border-white/5">
                 <div>
                   <span className="text-sm text-gray-400 font-bold uppercase tracking-widest block">Stripe Payout Account</span>
-                  <span className="text-xs text-gray-500 mt-1 block">Required to receive money transfers</span>
+                  <span className="text-xs text-gray-500 mt-1 block">Required to receive payments from buyers</span>
                 </div>
                 <div className="flex items-center gap-3">
                   {isStripeOnboarded ? (

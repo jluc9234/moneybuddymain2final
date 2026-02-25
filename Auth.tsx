@@ -58,7 +58,7 @@ const Auth: React.FC = () => {
             Money Buddy
           </h2>
           <p className="mt-1 text-sm font-bold uppercase tracking-[0.3em]" style={{ color: '#a3e635' }}>
-            Geo-Safe
+            Secure Marketplace
           </p>
         </div>
 

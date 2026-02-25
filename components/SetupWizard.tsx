@@ -11,26 +11,26 @@ const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete }) => {
   const steps = [
     {
       id: 1,
-      title: "Protocol Initialization",
-      description: "Welcome to Money Buddy. We need to verify your operational parameters before unlocking the capital suite.",
+      title: "Welcome to Money Buddy",
+      description: "The secure marketplace for buying and selling goods & services with built-in escrow protection and location-verified delivery.",
       icon: "⚡"
     },
     {
       id: 2,
-      title: "Capital Integration",
-      description: "Secure your legacy bank accounts via Plaid Link. This creates a bridge between your assets and the Geo-Safe network.",
+      title: "Connect Your Bank",
+      description: "Link your bank account via Plaid to receive payments directly. Sellers get paid instantly when buyers confirm delivery.",
       icon: "🏛️"
     },
     {
       id: 3,
-      title: "Spatial Security",
-      description: "Learn how to use geofenced transfers. Funds are only released when the recipient enters your specified spatial coordinates.",
+      title: "Location-Verified Delivery",
+      description: "Set a delivery zone on any payment. Funds are held in escrow and only released when the seller arrives at the agreed meeting point.",
       icon: "📍"
     },
     {
       id: 4,
-      title: "Ready for Deployment",
-      description: "Your terminal is fully calibrated. You now have absolute control over cross-border and local spatial transactions.",
+      title: "Ready to Go",
+      description: "You're all set. Start buying or selling with full escrow protection, delivery verification, and automatic refunds on expired orders.",
       icon: "🛡️"
     }
   ];

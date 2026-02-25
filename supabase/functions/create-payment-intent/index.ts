@@ -103,7 +103,7 @@ serve(async (req) => {
         recipient_email: recipient_email.toLowerCase(),
         recipient_id: recipientProfile?.id || null,
         amount,
-        description: description || 'Transfer',
+        description: description || 'Goods & Services Payment',
         status: 'pending_payment',
         stripe_payment_intent_id: paymentIntent.id,
         platform_fee_amount: platformFeeCents / 100,
