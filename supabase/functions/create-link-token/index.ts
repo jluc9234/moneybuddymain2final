@@ -12,7 +12,10 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization')!;
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing Authorization header' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
     const token = authHeader.replace('Bearer ', '');
 
     const supabase = createClient(
@@ -46,7 +49,12 @@ serve(async (req) => {
     const plaidData = await plaidResponse.json();
 
     if (!plaidResponse.ok) {
-      return new Response(JSON.stringify({ error: plaidData.error_message || 'Plaid error' }), {
+      console.error("PLAID ERROR DETAILS:", JSON.stringify(plaidData));
+      return new Response(JSON.stringify({ 
+        error_message: plaidData.error_message,
+        error_code: plaidData.error_code,
+        error_type: plaidData.error_type
+      }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -56,6 +64,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
+    console.error("SERVER ERROR:", err);
     return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
