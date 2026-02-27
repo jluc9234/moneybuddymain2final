@@ -1,7 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
-import { NextResponse } from 'next/server';
+Import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 
-export const runtime = 'nodejs';
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 const PLAID_BASE = 'https://production.plaid.com';
 const STRIPE_BASE = 'https://api.stripe.com/v1';
@@ -11,8 +14,8 @@ async function plaidRequest(endpoint: string, body: Record<string, unknown>) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      client_id: process.env.PLAID_CLIENT_ID,
-      secret: process.env.PLAID_SECRET,
+      client_id: Deno.env.get('PLAID_CLIENT_ID'),
+      secret: Deno.env.get('PLAID_SECRET'),
       ...body,
     }),
   });
@@ -23,7 +26,7 @@ async function stripeRequest(endpoint: string, body: string) {
   const res = await fetch(`${STRIPE_BASE}${endpoint}`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${process.env.STRIPE_SECRET_KEY}`,
+      'Authorization': `Bearer ${Deno.env.get('STRIPE_SECRET_KEY')}`,
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body,
@@ -31,33 +34,27 @@ async function stripeRequest(endpoint: string, body: string) {
   return res.json();
 }
 
-export async function OPTIONS() {
-  return NextResponse.json({}, {
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    },
-  });
-}
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
 
-export async function POST(req: Request) {
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized: Missing token' }, { status: 401 });
-    }
+    const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
 
     const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_ANON_KEY!
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!
     );
 
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 });
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const { public_token, account_id } = await req.json();
@@ -72,7 +69,7 @@ export async function POST(req: Request) {
 
     // 2. Get account details
     const accountsData = await plaidRequest('/accounts/get', { access_token: accessToken });
-    const account = accountsData.accounts?.find((a: any) => a.account_id === account_id) || accountsData.accounts?.[0];
+    const account = accountsData.accounts?.find((a: { account_id: string }) => a.account_id === account_id) || accountsData.accounts?.[0];
 
     // 3. Check if user already has a Stripe Connect account
     const { data: profile } = await supabase
@@ -113,15 +110,12 @@ export async function POST(req: Request) {
     const attachParams = new URLSearchParams();
     attachParams.append('external_account', bankTokenData.stripe_bank_account_token);
 
-    const attachRes = await stripeRequest(`/accounts/${connectAccountId}/external_accounts`, attachParams.toString());
-    if (attachRes.error) {
-       throw new Error(attachRes.error.message);
-    }
+    await stripeRequest(`/accounts/${connectAccountId}/external_accounts`, attachParams.toString());
 
     // 7. Save to database
     const serviceSupabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
     await serviceSupabase.from('profiles').upsert({
@@ -143,13 +137,20 @@ export async function POST(req: Request) {
       stripe_bank_account_token: bankTokenData.stripe_bank_account_token,
     }, { onConflict: 'plaid_account_id' });
 
-    return NextResponse.json({
+    return new Response(JSON.stringify({
       success: true,
       stripe_connect_account_id: connectAccountId,
       bank_name: account?.name || 'Bank Account',
       bank_mask: account?.mask || '****',
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: (err as Error).message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
-}
+});
+
+// Trigger deploy
