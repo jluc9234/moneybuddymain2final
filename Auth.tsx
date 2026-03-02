@@ -102,7 +102,7 @@ const Auth: React.FC = () => {
           </div>
 
           {message && (
-            <div className={`p-4 rounded-xl text-xs font-bold leading-relaxed animate-pulse ${message.type === 'error' ? 'bg-red-500/20 text-red-200 border border-red-500/30' : 'bg-lime-500/20 text-lime-200 border border-lime-500/30'}`}>
+            <div className={`p-4 rounded-xl text-xs font-bold leading-relaxed animate-pulse ${message.type === 'error' ? 'bg-red-500/20 text-white border border-red-500/30' : 'bg-lime-500/20 text-white border border-lime-500/30'}`}>
               <span className="uppercase mr-2">[{message.type}]:</span> {message.text}
             </div>
           )}
@@ -120,7 +120,7 @@ const Auth: React.FC = () => {
               <button
                 type="button"
                 onClick={handlePasswordReset}
-                className="w-full text-[10px] text-[#FF7CA3] hover:text-white transition-colors uppercase font-bold tracking-widest"
+                className="w-full text-[10px] text-white hover:text-[#FF7CA3] transition-colors uppercase font-bold tracking-widest"
               >
                 Forgot Password?
               </button>
@@ -131,7 +131,7 @@ const Auth: React.FC = () => {
         <div className="text-center pt-4">
           <button
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-[#FF7CA3] hover:text-white transition-colors text-xs font-bold uppercase tracking-widest"
+            className="text-white hover:text-[#FF7CA3] transition-colors text-xs font-bold uppercase tracking-widest"
           >
             {isSignUp ? 'Already have an account? Log In' : "Don't have an account? Sign Up"}
           </button>
