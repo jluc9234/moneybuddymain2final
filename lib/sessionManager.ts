@@ -112,7 +112,7 @@ export class SessionManager {
         .select('*')
         .eq('session_token', sessionToken)
         .eq('is_active', true)
-        .single();
+        .maybeSingle(); // Use maybeSingle() to handle no session case
 
       if (error || !session) {
         await logSecurityEvent({
@@ -166,7 +166,7 @@ export class SessionManager {
         .from('user_sessions')
         .select('user_id, ip_address')
         .eq('session_token', sessionToken)
-        .single();
+        .maybeSingle(); // Use maybeSingle() to handle no session case
 
       await supabase
         .from('user_sessions')
@@ -242,7 +242,7 @@ export class SessionManager {
         .eq('is_active', true)
         .order('created_at', { ascending: true })
         .limit(1)
-        .single();
+        .maybeSingle(); // Use maybeSingle() to handle no session case
 
       if (oldestSession) {
         await this.invalidateSession(oldestSession.session_token);

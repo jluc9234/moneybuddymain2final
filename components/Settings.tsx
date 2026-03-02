@@ -26,7 +26,7 @@ const Settings: React.FC<SettingsProps> = ({ userEmail, isAdmin }) => {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle() to handle no profile case
 
       if (data) {
         setProfile(data as UserProfile);

@@ -122,7 +122,7 @@ export class SecurityMonitor {
           .from('profiles')
           .select('email')
           .eq('id', userId)
-          .single();
+          .maybeSingle(); // Use maybeSingle() to handle no profile case
 
         await this.createAlert({
           type: AlertType.HIGH_TRANSACTION_VOLUME,

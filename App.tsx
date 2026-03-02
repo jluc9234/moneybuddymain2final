@@ -25,6 +25,7 @@ const App: React.FC = () => {
   const [inboundTransfers, setInboundTransfers] = useState<Transaction[]>([]);
   const [platformRevenue, setPlatformRevenue] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true); // Add auth loading state
   const [hasCompletedSetup, setHasCompletedSetup] = useState(false);
   
   const [theme, setTheme] = useState({
@@ -74,12 +75,17 @@ const App: React.FC = () => {
 
   useEffect(() => {
     // Auth Listeners
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const initializeAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
-    });
+      setAuthLoading(false); // Auth check complete
+    };
+
+    initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      setAuthLoading(false); // Auth state updated
     });
 
     // Setup Wizard Check
@@ -94,6 +100,11 @@ const App: React.FC = () => {
       fetchData();
       if (!hasCompletedSetup && currentView !== 'setup') {
         setCurrentView('setup');
+      }
+      
+      // Redirect non-admin users away from admin view
+      if (currentView === 'admin' && session.user.email.toLowerCase() !== ADMIN_EMAIL) {
+        setCurrentView('dashboard');
       }
     }
   }, [session, hasCompletedSetup, fetchData]);
@@ -122,7 +133,20 @@ const App: React.FC = () => {
     '--pink-accent': theme.pinkAccent,
   } as React.CSSProperties;
 
-  if (!session) {
+  // Show loading spinner while checking authentication
+  if (authLoading) {
+    return (
+      <div style={cssVars} className="min-h-screen bg-gradient-to-br from-[#4a1a5e] via-[#1b6e8a] to-[#25905a] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-lime-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-sm font-bold uppercase tracking-widest">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth page if no session or session is invalid
+  if (!session || !session.user) {
     return (
       <div style={cssVars} className="min-h-screen bg-gradient-to-br from-[#4a1a5e] via-[#1b6e8a] to-[#25905a] overflow-hidden">
         <Auth />
@@ -165,7 +189,7 @@ const App: React.FC = () => {
             <TransactionHistory transactions={transactions} />
           )}
 
-          {currentView === 'admin' && (
+          {currentView === 'admin' && session.user.email.toLowerCase() === ADMIN_EMAIL && (
             <AdminPanel currentTheme={theme} onThemeChange={setTheme} />
           )}
 

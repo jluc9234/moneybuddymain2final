@@ -1,19 +1,42 @@
 
 import React, { useState, useEffect } from 'react';
-
+import { supabase } from '../supabaseClient';
 
 interface AdminPanelProps {
   currentTheme: { primary: string, secondary: string, accent: string };
   onThemeChange: (theme: any) => void;
 }
 
+const ADMIN_EMAIL = 'lucasnale305@gmail.com';
+
 const AdminPanel: React.FC<AdminPanelProps> = ({ currentTheme, onThemeChange }) => {
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
   const [config, setConfig] = useState({
     plaidClientId: '',
     stripePublicKey: '',
   });
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'config' | 'sql'>('config');
+
+  useEffect(() => {
+    const checkAdminAccess = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session && session.user && session.user.email.toLowerCase() === ADMIN_EMAIL) {
+          setIsAdmin(true);
+        } else {
+          setIsAdmin(false);
+        }
+      } catch (error) {
+        setIsAdmin(false);
+      } finally {
+        setIsChecking(false);
+      }
+    };
+
+    checkAdminAccess();
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem('moneybuddy_config');
@@ -42,6 +65,36 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ currentTheme, onThemeChange }) 
   const updateTheme = (key: string, val: string) => {
     onThemeChange({ ...currentTheme, [key]: val });
   };
+
+  // Show loading state while checking admin access
+  if (isChecking) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#4a1a5e] via-[#1b6e8a] to-[#25905a] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-red-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-sm font-bold uppercase tracking-widest">Verifying Access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied if not admin
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#4a1a5e] via-[#1b6e8a] to-[#25905a] flex items-center justify-center">
+        <div className="text-center glass p-8 rounded-3xl border border-red-500/30">
+          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 3.182-3.414m-3.182-3.414a2.25 2.25 0 00-3.182 3.414m3.182-3.414L12 12.5m0 0L8.818 8.918m0 0L12 12.5m0 0L15.182 8.918m-3.182-3.414L12 12.5z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold text-red-400 mb-2">Access Denied</h2>
+          <p className="text-white/80 text-sm">You don't have permission to access the admin panel.</p>
+          <p className="text-white/60 text-xs mt-4">This area is restricted to administrators only.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in zoom-in duration-500 pb-20">
