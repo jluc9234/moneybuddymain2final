@@ -57,7 +57,7 @@ const Auth: React.FC = () => {
           <h2 className="text-3xl font-extrabold text-white tracking-tight leading-none">
             Money Buddy
           </h2>
-          <p className="mt-1 text-sm font-bold uppercase tracking-[0.3em] text-lime-400">
+          <p className="mt-1 text-sm font-bold uppercase tracking-[0.3em] text-white">
             Secure Marketplace
           </p>
         </div>
@@ -65,7 +65,7 @@ const Auth: React.FC = () => {
         <form className="mt-8 space-y-6" onSubmit={handleAuth}>
           <div className="space-y-4">
             <div>
-              <label className="text-[10px] font-bold text-indigo-200 uppercase tracking-[0.2em] mb-2 block ml-1">Email</label>
+              <label className="text-[10px] font-bold text-white uppercase tracking-[0.2em] mb-2 block ml-1">Email</label>
               <input
                 type="email"
                 required
@@ -76,7 +76,7 @@ const Auth: React.FC = () => {
               />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-indigo-200 uppercase tracking-[0.2em] mb-2 block ml-1">Password</label>
+              <label className="text-[10px] font-bold text-white uppercase tracking-[0.2em] mb-2 block ml-1">Password</label>
               <input
                 type="password"
                 required
@@ -107,7 +107,7 @@ const Auth: React.FC = () => {
               <button
                 type="button"
                 onClick={handlePasswordReset}
-                className="w-full text-[10px] text-[#FF7CA3] hover:text-white transition-colors uppercase font-bold tracking-widest"
+                className="w-full text-[10px] text-white hover:text-lime-400 transition-colors uppercase font-bold tracking-widest"
               >
                 Forgot Password?
               </button>
@@ -118,7 +118,7 @@ const Auth: React.FC = () => {
         <div className="text-center pt-4">
           <button
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-[#FF7CA3] hover:text-white transition-colors text-xs font-bold uppercase tracking-widest"
+            className="text-white hover:text-lime-400 transition-colors text-xs font-bold uppercase tracking-widest"
           >
             {isSignUp ? 'Already have an account? Log In' : "Don't have an account? Sign Up"}
           </button>

@@ -21,7 +21,7 @@ Set these in your Supabase Edge Function settings:
 ```bash
 # Core Configuration
 PLAID_ENV=production
-STRIPE_ENV=production
+STRIPE_ENV=live
 SUPABASE_URL=https://your-project.supabase.co
 
 # API Keys (NEVER commit to git)
