@@ -15,6 +15,7 @@ const Settings: React.FC<SettingsProps> = ({ userEmail, isAdmin }) => {
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [bankInfo, setBankInfo] = useState<{ name: string; mask: string } | null>(null);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
 
   // Fetch user profile and bank info
   useEffect(() => {
@@ -34,16 +35,62 @@ const Settings: React.FC<SettingsProps> = ({ userEmail, isAdmin }) => {
 
       const { data: banks } = await supabase
         .from('bank_accounts')
-        .select('name, mask')
+        .select('*')
         .eq('user_id', user.id)
-        .limit(1);
+        .order('created_at', { ascending: false });
 
       if (banks && banks.length > 0) {
+        setBankAccounts(banks);
         setBankInfo({ name: banks[0].name, mask: banks[0].mask });
       }
     }
     fetchProfile();
   }, []);
+
+  // Function to remove bank account
+  const handleRemoveBank = async (accountId: string) => {
+    if (!confirm('Are you sure you want to remove this bank account? This will unlink it from MoneyBuddy.')) {
+      return;
+    }
+
+    setLoading(true);
+    setStatusMsg('Removing bank account...');
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('bank_accounts')
+        .delete()
+        .eq('id', accountId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Refresh bank accounts list
+      const { data: updatedBanks } = await supabase
+        .from('bank_accounts')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (updatedBanks) {
+        setBankAccounts(updatedBanks);
+        if (updatedBanks.length > 0) {
+          setBankInfo({ name: updatedBanks[0].name, mask: updatedBanks[0].mask });
+        } else {
+          setBankInfo(null);
+        }
+      }
+
+      setStatusMsg('Bank account removed successfully');
+    } catch (err) {
+      setStatusMsg(`Error: ${(err as Error).message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Request Plaid Link token
   const handleConnectBank = async () => {
@@ -77,6 +124,21 @@ const Settings: React.FC<SettingsProps> = ({ userEmail, isAdmin }) => {
 
       setProfile(prev => prev ? { ...prev, stripe_connect_account_id: result.stripe_connect_account_id } : prev);
       setBankInfo({ name: result.bank_name, mask: result.bank_mask });
+      
+      // Refresh bank accounts list to include the new one
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: updatedBanks } = await supabase
+          .from('bank_accounts')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (updatedBanks) {
+          setBankAccounts(updatedBanks);
+        }
+      }
+      
       setStatusMsg('Bank account linked successfully');
       setLinkToken(null);
     } catch (err) {
@@ -151,29 +213,54 @@ const Settings: React.FC<SettingsProps> = ({ userEmail, isAdmin }) => {
           <Section title="Financial Connection">
             <div className="space-y-5">
               {/* Bank Account Status */}
-              <div className="flex items-center justify-between py-2 border-b border-white/5">
-                <div>
-                  <span className="text-sm text-gray-400 font-bold uppercase tracking-widest block">Bank Account</span>
-                  {bankInfo && (
-                    <span className="text-xs text-indigo-300 mt-1 block">{bankInfo.name} (****{bankInfo.mask})</span>
-                  )}
+              <div className="py-2 border-b border-white/5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm text-gray-400 font-bold uppercase tracking-widest">Bank Accounts ({bankAccounts.length})</span>
+                  <button
+                    onClick={handleConnectBank}
+                    disabled={loading}
+                    className="px-3 py-1 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 rounded-lg text-[10px] font-black uppercase tracking-widest border border-indigo-500/30 transition-all disabled:opacity-50"
+                  >
+                    {loading ? 'Loading...' : '+ Add Account'}
+                  </button>
                 </div>
-                <div className="flex items-center gap-3">
-                  {hasBankConnected ? (
-                    <span className="flex items-center gap-2 text-[10px] font-black uppercase text-lime-400">
-                      <span className="w-2 h-2 rounded-full bg-lime-400 shadow-[0_0_8px_#bef264]"></span>
-                      Connected
-                    </span>
-                  ) : (
-                    <button
-                      onClick={handleConnectBank}
-                      disabled={loading}
-                      className="px-4 py-2 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 rounded-xl text-xs font-black uppercase tracking-widest border border-indigo-500/30 transition-all disabled:opacity-50"
-                    >
-                      {loading ? 'Loading...' : 'Connect Bank'}
-                    </button>
-                  )}
-                </div>
+                
+                {bankAccounts.length > 0 ? (
+                  <div className="space-y-2">
+                    {bankAccounts.map((account, index) => (
+                      <div key={account.id} className="flex items-center justify-between py-2 px-3 bg-white/5 rounded-lg border border-white/10">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-indigo-600/20 rounded-lg flex items-center justify-center">
+                            <span className="text-indigo-400 text-xs font-bold">{account.type?.charAt(0).toUpperCase() || 'B'}</span>
+                          </div>
+                          <div>
+                            <span className="text-sm text-white font-medium block">{account.name}</span>
+                            <span className="text-xs text-gray-400">****{account.mask} • {account.type || 'checking'}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-lime-400 font-medium">${(account.balance || 0).toLocaleString()}</span>
+                          <button
+                            onClick={() => handleRemoveBank(account.id)}
+                            disabled={loading}
+                            className="w-6 h-6 rounded bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 flex items-center justify-center transition-all disabled:opacity-50"
+                            title="Remove bank account"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                          <span className="w-2 h-2 rounded-full bg-lime-400 shadow-[0_0_8px_#bef264]"></span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <div className="text-gray-500 text-xs font-medium uppercase tracking-widest">No bank accounts connected</div>
+                    <div className="text-gray-600 text-[10px] mt-1">Connect your first bank account to get started</div>
+                  </div>
+                )}
               </div>
 
               {/* Stripe Connect Onboarding Status */}
