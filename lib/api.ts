@@ -79,7 +79,6 @@ export async function callEdgeFunction<T = unknown>(
       // Manually passing the Authorization header ensures the Edge Function 
       // can identify the user and create the Stripe Connect account.
       Authorization: `Bearer ${session.access_token}`,
-      ...securityHeaders,
     },
   });
 
