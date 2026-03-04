@@ -238,21 +238,20 @@ export class SecurityMonitor {
         return; // Still in cooldown period
       }
 
-      // Create alert in database
-      const { error } = await supabase
-        .from('security_alerts')
-        .insert({
+      // Create alert via Edge Function (bypasses RLS)
+      const { data, error } = await supabase.functions.invoke('create-security-alert', {
+        body: {
           alert_type: alertData.type,
           severity: alertData.severity,
           user_id: alertData.userId,
           ip_address: alertData.ipAddress,
           user_agent: alertData.userAgent,
           metadata: alertData.metadata,
-          created_at: new Date().toISOString(),
-        });
+        },
+      });
 
       if (error) {
-        console.error('Failed to create alert:', error);
+        console.error('Failed to create alert via Edge Function:', error);
         return;
       }
 
