@@ -158,14 +158,15 @@ export function isIPAllowed(ip: string, allowedIPs: string[]): boolean {
 // Audit logging
 export async function logSecurityEvent(event: SecurityEvent): Promise<void> {
   try {
-    await supabase.from('security_audit_log').insert({
-      event_type: event.type,
-      user_id: event.userId,
-      ip_address: event.ip,
-      user_agent: event.userAgent,
-      metadata: event.metadata,
-      severity: event.severity || 'medium',
-      created_at: new Date().toISOString(),
+    await supabase.functions.invoke('log-security-event', {
+      body: {
+        event_type: event.type,
+        user_id: event.userId,
+        ip_address: event.ip,
+        user_agent: event.userAgent,
+        metadata: event.metadata,
+        severity: event.severity,
+      },
     });
   } catch (error) {
     console.error('Failed to log security event:', error);
