@@ -37,6 +37,8 @@ serve(async (req) => {
     }
 
     const requestBody = await req.json();
+    console.log('Creating security alert:', requestBody);
+
     const { alert_type, severity, user_id, ip_address, user_agent, metadata } = requestBody;
 
     if (!alert_type || !severity) {
@@ -72,6 +74,8 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log('Alert created successfully:', data);
 
     return new Response(JSON.stringify({ success: true, alert: data }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
