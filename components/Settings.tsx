@@ -138,6 +138,8 @@ const Settings: React.FC<SettingsProps> = ({ userEmail, isAdmin }) => {
 
       console.log('Plaid token exchange result:', result);
 
+      console.log("SERVER_TRACE:", result.debug_trace);
+
       setProfile(prev => prev ? { ...prev, stripe_connect_account_id: result.stripe_connect_account_id } : prev);
       
       // Refresh bank accounts list to include the new ones
