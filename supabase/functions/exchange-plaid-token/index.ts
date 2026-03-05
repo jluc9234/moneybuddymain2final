@@ -58,21 +58,14 @@ serve(async (req) => {
       });
     }
 
-    const requestBody = await req.json();
-    let { public_token, account_ids, account_id } = requestBody;
-    
-    // Handle backward compatibility: if account_id is provided, use it as single account
-    if (account_id && !account_ids) {
-      account_ids = [account_id];
-    }
-    
-    if (!Array.isArray(account_ids) || account_ids.length === 0) {
-      return new Response(JSON.stringify({ error: 'Missing or invalid account_ids array' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    // 1. Exchange public token for access token
+    try {
+      const requestBody = await req.json();
+      console.log('Request body:', requestBody);
+      let { public_token, account_ids, account_id } = requestBody;
+      
+      // Handle backward compatibility: if account_id is provided, use it as single account
+      if (account_id && !account_ids) {
+        account_ids = [account_id];
     const exchangeData = await plaidRequest('/item/public_token/exchange', { public_token });
     if (exchangeData.error_code) {
       throw new Error(exchangeData.error_message);
@@ -129,8 +122,12 @@ serve(async (req) => {
     const processedAccounts = [];
 
     for (const accountId of account_ids) {
+      console.log('Processing account:', accountId);
       const account = accountsData.accounts?.find((a: { account_id: string }) => a.account_id === accountId);
-      if (!account) continue;
+      if (!account) {
+        console.log('Account not found, skipping:', accountId);
+        continue;
+      }
 
       // Create Stripe bank account token via Plaid integration
       const bankTokenData = await plaidRequest('/processor/stripe/bank_account_token/create', {
@@ -161,6 +158,8 @@ serve(async (req) => {
         plaid_access_token: accessToken,
         stripe_bank_account_token: bankTokenData.stripe_bank_account_token,
       }, { onConflict: 'plaid_account_id' });
+
+      console.log('Saved account:', accountId);
 
       processedAccounts.push({
         account_id: accountId,

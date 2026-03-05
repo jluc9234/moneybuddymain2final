@@ -141,20 +141,31 @@ const Settings: React.FC<SettingsProps> = ({ userEmail, isAdmin }) => {
       setProfile(prev => prev ? { ...prev, stripe_connect_account_id: result.stripe_connect_account_id } : prev);
       
       // Refresh bank accounts list to include the new ones
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: updatedBanks } = await supabase
-          .from('bank_accounts')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-        
-        if (updatedBanks) {
-          setBankAccounts(updatedBanks);
-          if (updatedBanks.length > 0) {
-            setBankInfo({ name: updatedBanks[0].name, mask: updatedBanks[0].mask });
+      try {
+        console.log('Refreshing bank accounts...');
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: updatedBanks, error } = await supabase
+            .from('bank_accounts')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+          
+          if (error) {
+            console.error('Error fetching updated banks:', error);
+            throw error;
+          }
+
+          console.log('Updated banks from DB:', updatedBanks);
+          if (updatedBanks) {
+            setBankAccounts(updatedBanks);
+            if (updatedBanks.length > 0) {
+              setBankInfo({ name: updatedBanks[0].name, mask: updatedBanks[0].mask });
+            }
           }
         }
+      } catch (error) {
+        console.error('Error refreshing bank accounts:', error);
       }
       
       setStatusMsg(`${result.accounts.length} bank account${result.accounts.length > 1 ? 's' : ''} linked successfully`);
