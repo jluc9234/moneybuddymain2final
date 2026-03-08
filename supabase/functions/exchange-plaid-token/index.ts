@@ -41,8 +41,6 @@ serve(async (req) => {
   }
 
   try {
-    const requestBody = await req.json();
-    console.log("DATA_INBOUND:", requestBody);
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
 
@@ -81,108 +79,115 @@ serve(async (req) => {
       if (exchangeData.error_code) {
         throw new Error(exchangeData.error_message);
       }
-    const accessToken = exchangeData.access_token;
-    const itemId = exchangeData.item_id;
+      const accessToken = exchangeData.access_token;
+      const itemId = exchangeData.item_id;
 
-    // 2. Get account details
-    const accountsData = await plaidRequest('/accounts/get', { access_token: accessToken });
+      // 2. Get account details
+      const accountsData = await plaidRequest('/accounts/get', { access_token: accessToken });
 
-    // 3. Check if user already has a Stripe Connect account
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('stripe_connect_account_id')
-      .eq('id', user.id)
-      .maybeSingle();
+      // 3. Check if user already has a Stripe Connect account
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('stripe_connect_account_id')
+        .eq('id', user.id)
+        .maybeSingle();
 
-    let connectAccountId = profile?.stripe_connect_account_id;
+      let connectAccountId = profile?.stripe_connect_account_id;
 
-    // Create service client
-    const serviceSupabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
+      // Create service client
+      const serviceSupabase = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      );
 
-    // 4. Create Stripe Connect Express account if needed
-    if (!connectAccountId) {
-      const params = new URLSearchParams();
-      params.append('type', 'express');
-      params.append('email', user.email!);
-      params.append('capabilities[transfers][requested]', 'true');
-      params.append('business_type', 'individual');
-      params.append('metadata[supabase_user_id]', user.id);
+      // 4. Create Stripe Connect Express account if needed
+      if (!connectAccountId) {
+        const params = new URLSearchParams();
+        params.append('type', 'express');
+        params.append('email', user.email!);
+        params.append('capabilities[transfers][requested]', 'true');
+        params.append('business_type', 'individual');
+        params.append('metadata[supabase_user_id]', user.id);
 
-      const stripeAccount = await stripeRequest('/accounts', params.toString());
-      if (stripeAccount.error) {
-        throw new Error(stripeAccount.error.message);
+        const stripeAccount = await stripeRequest('/accounts', params.toString());
+        if (stripeAccount.error) {
+          throw new Error(stripeAccount.error.message);
+        }
+        connectAccountId = stripeAccount.id;
+
+        // Immediately save to prevent race conditions
+        const { error: updateError } = await serviceSupabase.from('profiles').upsert({
+          id: user.id,
+          email: user.email,
+          stripe_connect_account_id: connectAccountId,
+        });
+
+        if (updateError) {
+          throw new Error('Failed to save Stripe account ID');
+        }
       }
-      connectAccountId = stripeAccount.id;
 
-      // Immediately save to prevent race conditions
-      const { error: updateError } = await serviceSupabase.from('profiles').upsert({
-        id: user.id,
-        email: user.email,
+      // 5. Process each selected account
+      const processedAccounts = [];
+
+      for (const accountId of account_ids) {
+        const account = accountsData.accounts?.find((a: { account_id: string }) => a.account_id === accountId);
+        if (!account) {
+          continue;
+        }
+
+        // Create Stripe bank account token via Plaid integration
+        const bankTokenData = await plaidRequest('/processor/stripe/bank_account_token/create', {
+          access_token: accessToken,
+          account_id: accountId,
+        });
+
+        if (bankTokenData.error_code) {
+          throw new Error(bankTokenData.error_message);
+        }
+
+        // Attach bank account to Connect account
+        const attachParams = new URLSearchParams();
+        attachParams.append('external_account', bankTokenData.stripe_bank_account_token);
+
+        await stripeRequest(`/accounts/${connectAccountId}/external_accounts`, attachParams.toString());
+
+        // Save to database
+        await serviceSupabase.from('bank_accounts').upsert({
+          user_id: user.id,
+          name: account.name || account.official_name || 'Bank Account',
+          mask: account.mask || '****',
+          balance: account.balances?.current || 0,
+          type: account.subtype || 'checking',
+          institution_name: 'Linked via Plaid',
+          plaid_item_id: itemId,
+          plaid_account_id: accountId,
+          plaid_access_token: accessToken,
+          stripe_bank_account_token: bankTokenData.stripe_bank_account_token,
+        }, { onConflict: 'plaid_account_id' });
+
+        processedAccounts.push({
+          account_id: accountId,
+          name: account.name || account.official_name || 'Bank Account',
+          mask: account.mask || '****',
+          type: account.subtype || 'checking',
+        });
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
         stripe_connect_account_id: connectAccountId,
-      });
-
-      if (updateError) {
-        throw new Error('Failed to save Stripe account ID');
-      }
-    }
-
-    // 5. Process each selected account
-    const processedAccounts = [];
-
-    for (const accountId of account_ids) {
-      const account = accountsData.accounts?.find((a: { account_id: string }) => a.account_id === accountId);
-      if (!account) {
-        continue;
-      }
-
-      // Create Stripe bank account token via Plaid integration
-      const bankTokenData = await plaidRequest('/processor/stripe/bank_account_token/create', {
-        access_token: accessToken,
-        account_id: accountId,
-      });
-
-      if (bankTokenData.error_code) {
-        throw new Error(bankTokenData.error_message);
-      }
-
-      // Attach bank account to Connect account
-      const attachParams = new URLSearchParams();
-      attachParams.append('external_account', bankTokenData.stripe_bank_account_token);
-
-      await stripeRequest(`/accounts/${connectAccountId}/external_accounts`, attachParams.toString());
-
-      // Save to database
-      await serviceSupabase.from('bank_accounts').upsert({
-        user_id: user.id,
-        name: account.name || account.official_name || 'Bank Account',
-        mask: account.mask || '****',
-        balance: account.balances?.current || 0,
-        type: account.subtype || 'checking',
-        institution_name: 'Linked via Plaid',
-        plaid_item_id: itemId,
-        plaid_account_id: accountId,
-        plaid_access_token: accessToken,
-        stripe_bank_account_token: bankTokenData.stripe_bank_account_token,
-      }, { onConflict: 'plaid_account_id' });
-
-      processedAccounts.push({
-        account_id: accountId,
-        name: account.name || account.official_name || 'Bank Account',
-        mask: account.mask || '****',
-        type: account.subtype || 'checking',
+        accounts: processedAccounts,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    return new Response(JSON.stringify({
-      success: true,
-      stripe_connect_account_id: connectAccountId,
-      accounts: processedAccounts,
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    catch (err) {
+      return new Response(JSON.stringify({ error: (err as Error).message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
   }
   catch (err) {
     return new Response(JSON.stringify({ error: (err as Error).message }), {
