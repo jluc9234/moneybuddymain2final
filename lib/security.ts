@@ -158,11 +158,16 @@ export function isIPAllowed(ip: string, allowedIPs: string[]): boolean {
 // Audit logging
 export async function logSecurityEvent(event: SecurityEvent): Promise<void> {
   try {
-    // Check if session is valid before logging
-    const { data: { session }, error } = await supabase.auth.getSession();
+    // Check if session is valid, refresh if expired
+    let { data: { session }, error } = await supabase.auth.getSession();
     if (error || !session || new Date(session.expires_at * 1000) < new Date()) {
-      console.log('Session invalid or expired, skipping security event logging');
-      return;
+      // Attempt to refresh the session
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !refreshData.session) {
+        console.log('Session refresh failed, skipping security event logging');
+        return;
+      }
+      session = refreshData.session;
     }
 
     await supabase.functions.invoke('log-security-event', {
