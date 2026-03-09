@@ -1,9 +1,12 @@
-import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+
+// Trigger redeploy with CORS fixes
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': 'https://moneybuddymain2final-4vh7s9xh4-jeffs-projects-bf900310.vercel.app/',
+  'Access-Control-Allow-Origin': 'https://moneybuddymain2final-nyrnkgt73-jeffs-projects-bf900310.vercel.app/',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
 serve(async (req) => {
