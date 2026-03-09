@@ -2,6 +2,11 @@
 import React, { useState } from 'react';
 import { supabase } from './supabaseClient';
 
+supabase.auth.onAuthStateChange((event, session) => {
+  console.log('Auth event:', event);
+  console.log('Session:', session);
+});
+
 const Auth: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,7 +19,7 @@ const Auth: React.FC = () => {
     setLoading(true);
     setMessage(null);
 
-    const { error } = isSignUp 
+    const { data, error } = isSignUp 
       ? await supabase.auth.signUp({ email, password })
       : await supabase.auth.signInWithPassword({ email, password });
 
@@ -25,6 +30,9 @@ const Auth: React.FC = () => {
       }
     } else if (isSignUp) {
       setMessage({ type: 'success', text: 'Confirmation link sent to your email.' });
+    } else {
+      // Log session after login
+      console.log('Session after login:', data.session);
     }
     setLoading(false);
   };
