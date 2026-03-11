@@ -227,7 +227,7 @@ const Settings: React.FC<SettingsProps> = ({ userEmail, isAdmin }) => {
   };
 
   const hasBankConnected = !!profile?.stripe_connect_account_id;
-  const isStripeOnboarded = !!profile?.stripe_connect_onboarded;
+  const isStripeOnboarded = !!profile?.stripe_connect_onboarded || !!profile?.stripe_connect_account_id;
   const handlePurgeLocalData = () => {
     if (confirm('Are you sure you want to purge all local data? This will reset your setup and configuration.')) {
       localStorage.clear();
