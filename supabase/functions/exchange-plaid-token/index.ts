@@ -40,6 +40,25 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  // Check required environment variables
+  const plaidClientId = Deno.env.get('PLAID_CLIENT_ID');
+  const plaidSecret = Deno.env.get('PLAID_SECRET');
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+
+  if (!plaidClientId || !plaidSecret || !supabaseUrl || !supabaseAnonKey || !supabaseServiceKey || !stripeSecretKey) {
+    console.error('Missing required environment variables');
+    return new Response(JSON.stringify({ 
+      error: 'Server configuration error', 
+      details: 'Missing required environment variables' 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
@@ -75,14 +94,21 @@ serve(async (req) => {
       }
 
       // 1. Exchange public token for access token
+      console.log('Exchanging public token for access token');
       const exchangeData = await plaidRequest('/item/public_token/exchange', { public_token });
       if (exchangeData.error_code) {
-        throw new Error(exchangeData.error_message);
+        console.error('Plaid public token exchange failed:', exchangeData);
+        return new Response(JSON.stringify({ error: 'Plaid API Error', details: exchangeData.error_message || 'Failed to exchange public token' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
       const accessToken = exchangeData.access_token;
       const itemId = exchangeData.item_id;
+      console.log('Successfully exchanged token');
 
       // 2. Get account details
+      console.log('Fetching account details');
       const accountsData = await plaidRequest('/accounts/get', { access_token: accessToken });
 
       // 3. Check if user already has a Stripe Connect account
