@@ -48,8 +48,9 @@ const Settings: React.FC<SettingsProps> = ({ userEmail, isAdmin }) => {
         console.error('Error fetching profile:', error);
       }
     }
+
     fetchProfile();
-  }, []);
+  }, [userEmail]); // Add dependency to prevent infinite re-renders
 
   // Function to remove bank account
   const handleRemoveBank = async (accountId: string) => {
@@ -98,8 +99,25 @@ const Settings: React.FC<SettingsProps> = ({ userEmail, isAdmin }) => {
 
   // Request Plaid Link token
   const handleConnectBank = async () => {
+    if (loading) return; // Prevent multiple simultaneous calls
+    
     setLoading(true);
     setStatusMsg(null);
+    
+    // Basic integration check
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setStatusMsg('Authentication error. Please log in again.');
+        setLoading(false);
+        return;
+      }
+    } catch (error) {
+      setStatusMsg('Authentication error. Please log in again.');
+      setLoading(false);
+      return;
+    }
+    
     try {
       console.log('Requesting Plaid link token...');
       const result = await callEdgeFunction<{ link_token: string }>('create-link-token', {});

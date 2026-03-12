@@ -96,7 +96,17 @@ serve(async (req) => {
 
     try {
       const requestBody = await req.json();
+      console.log('Request body received:', JSON.stringify(requestBody, null, 2));
+      
       let { public_token, account_ids, account_id } = requestBody;
+      
+      if (!public_token) {
+        console.error('Missing public_token in request');
+        return new Response(JSON.stringify({ error: 'Missing public_token' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       
       // Handle backward compatibility: if account_id is provided, use it as single account
       if (account_id && !account_ids) {
@@ -127,6 +137,22 @@ serve(async (req) => {
       // 2. Get account details
       console.log('Fetching account details');
       const accountsData = await plaidRequest('/accounts/get', { access_token: accessToken });
+      
+      if (accountsData.error_code) {
+        console.error('Plaid accounts get failed:', accountsData);
+        return new Response(JSON.stringify({ error: 'Failed to get account details', details: accountsData.error_message || 'Plaid API error' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      if (!accountsData.accounts || accountsData.accounts.length === 0) {
+        console.error('No accounts returned from Plaid');
+        return new Response(JSON.stringify({ error: 'No accounts found' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
       // 3. Check if user already has a Stripe Connect account
       const { data: profile } = await supabase

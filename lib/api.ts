@@ -33,7 +33,10 @@ export async function callEdgeFunction<T = unknown>(
   const userAgent = navigator.userAgent;
 
   // Rate limiting check
-  const rateLimitResult = await rateLimit(RATE_LIMITS.API, new Request('https://hqzqhuquluyvpjyieydl.supabase.co'));
+  const rateLimitResult = await rateLimit(
+    RATE_LIMITS.API,
+    new Request(import.meta.env.VITE_SUPABASE_URL)
+  );
   if (!rateLimitResult.allowed) {
     await securityMonitor.createAlert({
       type: 'RATE_LIMIT_EXCEEDED' as any,
