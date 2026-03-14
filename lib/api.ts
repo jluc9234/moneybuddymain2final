@@ -109,7 +109,29 @@ export async function callEdgeFunction<T = unknown>(
         errorCode: error.code 
       }
     });
-    throw new Error(error.message || `Edge function "${functionName}" failed`);
+
+    // Try to surface extremely clear, structured error information if the
+    // Edge Function returned a JSON error payload.
+    let verboseMessage = error.message || `Edge function "${functionName}" failed`;
+    if (data && typeof data === 'object') {
+      const anyData = data as any;
+      const simple = anyData.simple_explanation;
+      const todo = anyData.what_to_do;
+      const location = anyData.location;
+
+      const parts = [
+        simple && `What went wrong: ${simple}`,
+        todo && `How to fix: ${todo}`,
+        location && `Where it failed: ${location}`,
+        anyData.error && `Raw error: ${anyData.error}`,
+      ].filter(Boolean);
+
+      if (parts.length > 0) {
+        verboseMessage = parts.join(' | ');
+      }
+    }
+
+    throw new Error(verboseMessage);
   }
 
   return data as T;
